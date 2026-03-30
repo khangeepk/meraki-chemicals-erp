@@ -6,6 +6,7 @@ const pool = new Pool({
   database: process.env.PGDATABASE || 'meraki',
   password: process.env.PGPASSWORD || '',
   port: process.env.PGPORT || 5432,
+  ssl: process.env.PGSSLMODE === 'require' ? { rejectUnauthorized: false } : false,
 });
 
 module.exports = {

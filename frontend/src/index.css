@@ -24,12 +24,12 @@
    ===================================================== */
 :root, .dark {
   --bg-base:        #090d17;
-  --bg-surface:     #0f1623;
-  --bg-raised:      #131c2e;
-  --bg-card:        #182238;
-  --bg-hover:       #1e2d47;
-  --border-subtle:  rgba(255,255,255,0.06);
-  --border-medium:  rgba(255,255,255,0.12);
+  --bg-surface:     rgba(15, 22, 35, 0.75);
+  --bg-raised:      rgba(19, 28, 46, 0.85);
+  --bg-card:        rgba(24, 34, 56, 0.9);
+  --bg-hover:       rgba(30, 45, 71, 0.85);
+  --border-subtle:  rgba(255,255,255,0.08);
+  --border-medium:  rgba(255,255,255,0.15);
   --text-primary:   #f0f4ff;
   --text-secondary: #94a3b8;
   --text-muted:     #4e6080;
@@ -43,12 +43,12 @@
    ===================================================== */
 .light {
   --bg-base:        #f0f4f8;
-  --bg-surface:     #e8edf5;
-  --bg-raised:      #dce3ee;
-  --bg-card:        #cdd6e6;
-  --bg-hover:       #c4cfdf;
-  --border-subtle:  rgba(0,0,0,0.06);
-  --border-medium:  rgba(0,0,0,0.12);
+  --bg-surface:     rgba(232, 237, 245, 0.75);
+  --bg-raised:      rgba(220, 227, 238, 0.85);
+  --bg-card:        rgba(205, 214, 230, 0.9);
+  --bg-hover:       rgba(196, 207, 223, 0.85);
+  --border-subtle:  rgba(0,0,0,0.08);
+  --border-medium:  rgba(0,0,0,0.15);
   --text-primary:   #0f172a;
   --text-secondary: #475569;
   --text-muted:     #94a3b8;
@@ -75,6 +75,8 @@ body {
    ===================================================== */
 .neo-surface {
   background: var(--bg-surface);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   box-shadow: var(--shadow-neo-out);
   border: 1px solid var(--border-subtle);
   border-radius: 1rem;
@@ -82,6 +84,8 @@ body {
 
 .neo-raised {
   background: var(--bg-raised);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   box-shadow: var(--shadow-neo-out);
   border: 1px solid var(--border-subtle);
   border-radius: 0.75rem;
@@ -95,6 +99,8 @@ body {
 
 .neo-card {
   background: var(--bg-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   box-shadow: var(--shadow-neo-out);
   border: 1px solid var(--border-medium);
   border-radius: 1rem;
@@ -313,7 +319,8 @@ select.glass-input option {
   white-space: nowrap;
 }
 
-.data-table tbody tr:hover { background: var(--bg-hover); }
+.data-table tbody tr { transition: background-color 0.25s, transform 0.2s; }
+.data-table tbody tr:hover { background: var(--bg-hover); transform: scale(1.002) translateX(2px); box-shadow: -4px 0 0 inset var(--clr-teal-light); }
 .data-table td.highlight { color: var(--text-primary); font-weight: 600; }
 .data-table td.mono { font-family: 'JetBrains Mono', monospace; }
 .data-table td.teal { color: var(--clr-teal-light); font-weight: 700; }
@@ -445,6 +452,23 @@ select.glass-input option {
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes tableStagger {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.data-table tbody tr {
+  animation: tableStagger 0.4s ease forwards;
+  opacity: 0;
+}
+
+.data-table tbody tr:nth-child(1) { animation-delay: 0.05s; }
+.data-table tbody tr:nth-child(2) { animation-delay: 0.1s; }
+.data-table tbody tr:nth-child(3) { animation-delay: 0.15s; }
+.data-table tbody tr:nth-child(4) { animation-delay: 0.2s; }
+.data-table tbody tr:nth-child(5) { animation-delay: 0.25s; }
+.data-table tbody tr:nth-child(n+6) { animation-delay: 0.3s; }
+
 @keyframes logoReveal {
   0%   { opacity: 0; transform: scale(0.82) translateY(-12px); filter: blur(6px); }
   60%  { opacity: 1; transform: scale(1.035) translateY(0);    filter: blur(0); }
@@ -516,6 +540,12 @@ select.glass-input option {
   border: 1px solid rgba(16,185,129,0.25);
 }
 
-.scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+.scrollbar-thin::-webkit-scrollbar { width: 8px; height: 8px; }
 .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
-.scrollbar-thin::-webkit-scrollbar-thumb { background: var(--border-medium); border-radius: 4px; }
+.scrollbar-thin::-webkit-scrollbar-thumb { 
+  background: var(--border-medium); 
+  border-radius: 10px; 
+  border: 2px solid transparent; 
+  background-clip: padding-box; 
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover { background: var(--text-muted); border: 2px solid transparent; background-clip: padding-box; }

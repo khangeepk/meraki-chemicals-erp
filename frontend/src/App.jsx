@@ -131,7 +131,7 @@ function Dashboard({ token, user, onLogout, theme, toggleTheme }) {
 
   return (
     <div style={{ minHeight:'100vh', padding:'1.25rem', maxWidth:1600, margin:'0 auto' }}>
-      <header className="neo-surface" style={{ padding:'1rem 1.5rem', marginBottom:'1.5rem', display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:'0.75rem' }}>
+      <header className="neo-surface" style={{ padding:'1rem 1.5rem', marginBottom:'1.5rem', display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:'0.75rem', position:'sticky', top:0, zIndex:50, backdropFilter:'blur(16px)', WebkitBackdropFilter:'blur(16px)' }}>
         {/* Brand */}
         <div style={{ display:'flex', alignItems:'center', gap:'0.85rem', cursor:'pointer' }} onClick={() => setActiveTab('dashboard')}>
           <img
