@@ -4,6 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const db = require('../db');
 const Decimal = require('decimal.js');
+const { authenticateJWT, requirePermission } = require('../middleware/auth');
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, path.join(__dirname, '../../uploads')),
@@ -22,8 +23,8 @@ router.get('/', async (req, res) => {
     }
 });
 
-// POST Create
-router.post('/', upload.single('purch_receipt_proof'), async (req, res) => {
+// POST Create — requires JWT + 'add' permission
+router.post('/', authenticateJWT, requirePermission('add'), upload.single('purch_receipt_proof'), async (req, res) => {
     try {
         const {
             purch_date, prod_name, quantity, prod_cost, disc_availed,
@@ -67,8 +68,8 @@ router.post('/', upload.single('purch_receipt_proof'), async (req, res) => {
     }
 });
 
-// PUT Edit
-router.put('/:id', upload.single('purch_receipt_proof'), async (req, res) => {
+// PUT Edit — requires JWT + 'edit' permission
+router.put('/:id', authenticateJWT, requirePermission('edit'), upload.single('purch_receipt_proof'), async (req, res) => {
     try {
         const { quantity, prod_cost, disc_availed, carriage_offload_cost, prod_name, purch_from } = req.body;
         
@@ -100,8 +101,8 @@ router.put('/:id', upload.single('purch_receipt_proof'), async (req, res) => {
     }
 });
 
-// DELETE
-router.delete('/:id', async (req, res) => {
+// DELETE — requires JWT + 'delete' permission
+router.delete('/:id', authenticateJWT, requirePermission('delete'), async (req, res) => {
     try {
         await db.query(`DELETE FROM tbl_Purchasing WHERE Prod_ID = $1`, [req.params.id]);
         res.json({ success: true, message: 'Purchasing block entirely removed.' });

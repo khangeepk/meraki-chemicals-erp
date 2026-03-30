@@ -5,6 +5,7 @@ const path = require('path');
 const db = require('../db');
 const Decimal = require('decimal.js');
 const { calculateProfitDistribution } = require('../utils/profitCalculator');
+const { authenticateJWT, requirePermission } = require('../middleware/auth');
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, path.join(__dirname, '../../uploads')),
@@ -23,8 +24,8 @@ router.get('/', async (req, res) => {
     }
 });
 
-// POST Create
-router.post('/', upload.single('sale_receipt_proof'), async (req, res) => {
+// POST Create — requires JWT + 'add' permission
+router.post('/', authenticateJWT, requirePermission('add'), upload.single('sale_receipt_proof'), async (req, res) => {
     let client;
     try {
         const {
@@ -83,8 +84,8 @@ router.post('/', upload.single('sale_receipt_proof'), async (req, res) => {
     }
 });
 
-// PUT Edit
-router.put('/:id', async (req, res) => {
+// PUT Edit — requires JWT + 'edit' permission
+router.put('/:id', authenticateJWT, requirePermission('edit'), async (req, res) => {
     // For editing sales, complex logic adjusting previously deducted stock could be implemented.
     // Given the constraints, a simple update is mapped here.
     try {
@@ -102,8 +103,8 @@ router.put('/:id', async (req, res) => {
     }
 });
 
-// DELETE
-router.delete('/:id', async (req, res) => {
+// DELETE — requires JWT + 'delete' permission (stock auto-restored via transaction)
+router.delete('/:id', authenticateJWT, requirePermission('delete'), async (req, res) => {
     let client;
     try {
         if (process.env.NODE_ENV !== 'test') { client = await db.getClient(); await client.query('BEGIN'); }

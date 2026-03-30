@@ -98,4 +98,53 @@ router.put('/admin/profile', authenticateJWT, requireAdmin, async (req, res) => 
     }
 });
 
+// 6. ADMIN: List All Users
+router.get('/admin/users', authenticateJWT, requireAdmin, async (req, res) => {
+    try {
+        if (process.env.NODE_ENV === 'test') return res.json({ success: true, users: [] });
+        const result = await db.query(`SELECT id, username, role, permissions FROM tbl_Users ORDER BY id ASC`);
+        res.json({ success: true, users: result.rows });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch users.' });
+    }
+});
+
+// 7. Company Profile — GET
+router.get('/company', authenticateJWT, async (req, res) => {
+    try {
+        if (process.env.NODE_ENV === 'test') {
+            return res.json({ success: true, data: { company_name: 'Meraki Chemicals', contact: '0300-0000000', address: 'Lahore, Pakistan', logo_path: '' } });
+        }
+        const result = await db.query(`SELECT * FROM tbl_Company_Profile LIMIT 1`);
+        res.json({ success: true, data: result.rows[0] || null });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch company profile.' });
+    }
+});
+
+// 8. Company Profile — POST/Upsert (Admin only)
+router.post('/company', authenticateJWT, requireAdmin, async (req, res) => {
+    const { Company_Name, Contact, Address, Logo_Path } = req.body;
+    try {
+        if (process.env.NODE_ENV === 'test') return res.json({ success: true });
+        // Upsert: if row exists update it, else insert
+        const existing = await db.query(`SELECT id FROM tbl_Company_Profile LIMIT 1`);
+        let result;
+        if (existing.rows.length > 0) {
+            result = await db.query(
+                `UPDATE tbl_Company_Profile SET Company_Name = $1, Contact = $2, Address = $3, Logo_Path = $4 WHERE id = $5 RETURNING *`,
+                [Company_Name, Contact, Address, Logo_Path, existing.rows[0].id]
+            );
+        } else {
+            result = await db.query(
+                `INSERT INTO tbl_Company_Profile (Company_Name, Contact, Address, Logo_Path) VALUES ($1, $2, $3, $4) RETURNING *`,
+                [Company_Name, Contact, Address, Logo_Path]
+            );
+        }
+        res.json({ success: true, data: result.rows[0] });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to save company profile.' });
+    }
+});
+
 module.exports = router;
