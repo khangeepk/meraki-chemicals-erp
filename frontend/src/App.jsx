@@ -10,7 +10,23 @@ import {
 const API = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:3000' : '');
 const LOGO = '/assets/meraki-logo.png';
 const getToken  = () => localStorage.getItem('meraki_token');
-const getUser   = () => { try { return JSON.parse(localStorage.getItem('meraki_user')); } catch { return null; } };
+// MASTER FIX: sanitize localStorage on READ — prevents corrupted old sessions crashing the Dashboard
+const getUser   = () => {
+  try {
+    const raw = JSON.parse(localStorage.getItem('meraki_user'));
+    if (!raw || typeof raw !== 'object') return null;
+    const safeUser = {
+      username:    String(raw.username    || ''),
+      role:        String(raw.role        || 'User'),
+      permissions: {
+        add:    Boolean(raw.permissions?.add),
+        edit:   Boolean(raw.permissions?.edit),
+        delete: Boolean(raw.permissions?.delete),
+      }
+    };
+    return safeUser.username ? safeUser : null;
+  } catch { return null; }
+};
 const setAuth   = (t, u) => { localStorage.setItem('meraki_token', t); localStorage.setItem('meraki_user', JSON.stringify(u)); };
 const clearAuth = () => { localStorage.removeItem('meraki_token'); localStorage.removeItem('meraki_user'); };
 
@@ -221,7 +237,8 @@ function Dashboard({ token, user, onLogout, theme, toggleTheme }) {
             </button>
             <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--bg-raised)] rounded-lg border border-[var(--border-subtle)]">
               <User size={14} className="text-[var(--text-muted)]"/>
-              <span className="text-sm font-semibold text-[var(--text-secondary)]">{user?.username}</span>
+              {/* Triple-defense: String() ensures even an object username never crashes JSX */}
+              <span className="text-sm font-semibold text-[var(--text-secondary)]">{String(user?.username ?? '')}</span>
             </div>
             <button onClick={onLogout} className="btn-secondary px-3 py-1.5"><LogOut size={16}/></button>
           </div>
