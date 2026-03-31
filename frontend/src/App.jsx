@@ -62,7 +62,20 @@ export default function App() {
 
   useEffect(() => { document.documentElement.className = theme; localStorage.setItem('meraki_theme', theme); }, [theme]);
 
-  const handleLogin  = (t, u) => { setAuth(t, u); setToken(t); setUser(u); };
+  const handleLogin  = (t, u) => {
+    // Strict sanitization: NEVER store raw API objects — ensure only clean primitives reach state/localStorage
+    const safeUser = {
+      username: String(u?.username || ''),
+      role: String(u?.role || 'User'),
+      permissions: {
+        add:    Boolean(u?.permissions?.add),
+        edit:   Boolean(u?.permissions?.edit),
+        delete: Boolean(u?.permissions?.delete),
+      }
+    };
+    if (!safeUser.username) { console.error('Login rejected: invalid user payload', u); return; }
+    setAuth(t, safeUser); setToken(t); setUser(safeUser);
+  };
   const handleLogout = ()     => { clearAuth(); setToken(null); setUser(null); };
   const toggleTheme  = ()     => setTheme(t => t === 'dark' ? 'light' : 'dark');
 

@@ -24,8 +24,8 @@ router.post('/login', async (req, res) => {
             console.log('No users found in DB. Auto-seeding default Admin account...');
             const hash = await bcrypt.hash('admin', 10);
             await db.query(
-                `INSERT INTO tbl_Users (username, password_hash, role, permissions) VALUES ($1, $2, $3, $4)`,
-                ['admin', hash, 'Admin', { add: true, edit: true, delete: true }]
+                `INSERT INTO tbl_Users (username, password_hash, role, permissions) VALUES ($1, $2, $3, $4::jsonb)`,
+                ['admin', hash, 'Admin', JSON.stringify({ add: true, edit: true, delete: true })]
             );
         }
 
@@ -44,7 +44,15 @@ router.post('/login', async (req, res) => {
             { expiresIn: '12h' }
         );
 
-        res.json({ success: true, token, user: { username: user.username, role: user.role, permissions: user.permissions } });
+        // Strictly sanitize permissions: only extract known booleans to prevent JSONB bleed
+        const rawPerms = user.permissions || {};
+        const safePermissions = {
+            add:    rawPerms.add    === true,
+            edit:   rawPerms.edit   === true,
+            delete: rawPerms.delete === true
+        };
+
+        res.json({ success: true, token, user: { username: String(user.username), role: String(user.role), permissions: safePermissions } });
     } catch (err) {
         console.error('Login Error:', err);
         res.status(500).json({ error: err.message || 'Internal Server Error' });
@@ -56,9 +64,12 @@ router.post('/admin/users', authenticateJWT, requireAdmin, async (req, res) => {
     const { new_username, new_password, role, permissions } = req.body;
     try {
         const hash = await bcrypt.hash(new_password, 10);
+        const safePerms = permissions && typeof permissions === 'object'
+            ? { add: Boolean(permissions.add), edit: Boolean(permissions.edit), delete: Boolean(permissions.delete) }
+            : { add: false, edit: false, delete: false };
         const result = await db.query(
-            `INSERT INTO tbl_Users (username, password_hash, role, permissions) VALUES ($1, $2, $3, $4) RETURNING id, username, role, permissions`,
-            [new_username, hash, role || 'User', permissions || { add: false, edit: false, delete: false }]
+            `INSERT INTO tbl_Users (username, password_hash, role, permissions) VALUES ($1, $2, $3, $4::jsonb) RETURNING id, username, role, permissions`,
+            [new_username, hash, role || 'User', JSON.stringify(safePerms)]
         );
         res.json({ success: true, user: result.rows[0] });
     } catch (err) {
