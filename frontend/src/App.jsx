@@ -22,6 +22,38 @@ const MOCK_SALES = [
   { sale_id: 1, prod_id: 1, prod_name: 'Sulphuric Acid 98%', sale_date: '2026-03-30', quantity: 30, prod_cost: '85.67', disc_availed: '0.00', sold_amount: '3600.00', sold_to: 'Textile Mills Pvt', gross_amount: '3600.00', net_profit: '1029.90', deduction_charity: '30.90', final_profit_sami: '545.85', final_profit_saif: '453.16', remaining_inventory: 120, remarks: '' },
 ];
 
+// ─── ERROR BOUNDARY ───────────────────────────────────────────────────────────
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, errorMsg: '' };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, errorMsg: error.toString() };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error("ErrorBoundary caught an error", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-[var(--bg-base)] text-center">
+          <AlertTriangle size={64} className="text-red-500 mb-6" />
+          <h1 className="text-2xl md:text-3xl font-bold text-[var(--text-primary)] mb-2">Something went wrong.</h1>
+          <p className="text-[var(--text-muted)] max-w-md mx-auto mb-8">We encountered an unexpected rendering fault. The session data may have failed to hydrate properly.</p>
+          <button onClick={() => { localStorage.clear(); window.location.reload(); }} className="btn-primary">
+            Clear Cache & Reload
+          </button>
+          <div className="mt-8 p-4 bg-red-900/10 border border-red-500/20 rounded-lg text-left max-w-2xl w-full overflow-auto">
+            <code className="text-red-400 text-xs">{this.state.errorMsg}</code>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // ─── ROOT ───────────────────────────────────────────────────────────────────
 export default function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem('meraki_theme') || 'dark');
@@ -34,8 +66,13 @@ export default function App() {
   const handleLogout = ()     => { clearAuth(); setToken(null); setUser(null); };
   const toggleTheme  = ()     => setTheme(t => t === 'dark' ? 'light' : 'dark');
 
-  if (!token) return <LoginScreen onLogin={handleLogin} theme={theme} toggleTheme={toggleTheme} />;
-  return <Dashboard token={token} user={user} onLogout={handleLogout} theme={theme} toggleTheme={toggleTheme} />;
+  const content = !token ? <LoginScreen onLogin={handleLogin} theme={theme} toggleTheme={toggleTheme} /> : <Dashboard token={token} user={user} onLogout={handleLogout} theme={theme} toggleTheme={toggleTheme} />;
+  
+  return (
+    <ErrorBoundary>
+      {content}
+    </ErrorBoundary>
+  );
 }
 
 // ─── LOGIN ───────────────────────────────────────────────────────────────────
@@ -104,6 +141,16 @@ function LoginScreen({ onLogin, theme, toggleTheme }) {
 
 // ─── DASHBOARD SHELL ─────────────────────────────────────────────────────────
 function Dashboard({ token, user, onLogout, theme, toggleTheme }) {
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center flex-col gap-4 bg-[var(--bg-base)]">
+         <div className="animate-spin rounded-full h-12 w-12 border-[3px] border-b-transparent border-[var(--clr-teal)]"></div>
+         <p className="text-[var(--clr-teal)] font-semibold animate-pulse tracking-wider">VERIFYING PROFILE...</p>
+         <button onClick={onLogout} className="mt-4 text-xs text-[var(--text-muted)] hover:text-red-400">Cancel & Logout</button>
+      </div>
+    );
+  }
+
   const [activeTab,      setActiveTab]      = useState('dashboard');
   const [isNavOpen,      setIsNavOpen]      = useState(false);
   const [purchasingData, setPurchasingData] = useState([]);
