@@ -141,16 +141,7 @@ function LoginScreen({ onLogin, theme, toggleTheme }) {
 
 // ─── DASHBOARD SHELL ─────────────────────────────────────────────────────────
 function Dashboard({ token, user, onLogout, theme, toggleTheme }) {
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center flex-col gap-4 bg-[var(--bg-base)]">
-         <div className="animate-spin rounded-full h-12 w-12 border-[3px] border-b-transparent border-[var(--clr-teal)]"></div>
-         <p className="text-[var(--clr-teal)] font-semibold animate-pulse tracking-wider">VERIFYING PROFILE...</p>
-         <button onClick={onLogout} className="mt-4 text-xs text-[var(--text-muted)] hover:text-red-400">Cancel & Logout</button>
-      </div>
-    );
-  }
-
+  // ── All hooks MUST come first — React Rules of Hooks ──────────────────────
   const [activeTab,      setActiveTab]      = useState('dashboard');
   const [isNavOpen,      setIsNavOpen]      = useState(false);
   const [purchasingData, setPurchasingData] = useState([]);
@@ -169,6 +160,17 @@ function Dashboard({ token, user, onLogout, theme, toggleTheme }) {
   }, [token]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  // ── Guard: user not yet hydrated — show spinner AFTER all hooks ────────────
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center flex-col gap-4 bg-[var(--bg-base)]">
+        <div className="animate-spin rounded-full h-12 w-12 border-[3px] border-b-transparent border-[var(--clr-teal)]"></div>
+        <p className="text-[var(--clr-teal)] font-semibold animate-pulse tracking-wider">VERIFYING PROFILE...</p>
+        <button onClick={onLogout} className="mt-4 text-xs text-[var(--text-muted)] hover:text-red-400">Cancel &amp; Logout</button>
+      </div>
+    );
+  }
 
   const tabs = [
     { id:'dashboard',  label:'Dashboard',   icon:<BarChart3 size={14}/> },
