@@ -8,6 +8,8 @@ const { authenticateJWT, requireAdmin, JWT_SECRET } = require('../middleware/aut
 // 1. LOGIN API
 router.post('/login', async (req, res) => {
     const { username, password } = req.body;
+    if (!username || !password) return res.status(400).json({ error: 'Missing username or password.' });
+
     try {
         if (process.env.NODE_ENV === 'test') { // Mock bypass for zero-error testing
             if (username === 'admin' && password === 'admin') {
@@ -16,11 +18,24 @@ router.post('/login', async (req, res) => {
             }
         }
 
+        // Auto-seed Admin if DB is completely empty (Init launch fallback)
+        const totalUsers = await db.query('SELECT COUNT(*) FROM tbl_Users');
+        if (parseInt(totalUsers.rows[0].count, 10) === 0) {
+            console.log('No users found in DB. Auto-seeding default Admin account...');
+            const hash = await bcrypt.hash('admin', 10);
+            await db.query(
+                `INSERT INTO tbl_Users (username, password_hash, role, permissions) VALUES ($1, $2, $3, $4)`,
+                ['admin', hash, 'Admin', { add: true, edit: true, delete: true }]
+            );
+        }
+
         const userQuery = await db.query('SELECT * FROM tbl_Users WHERE username = $1', [username]);
         if (userQuery.rows.length === 0) return res.status(401).json({ error: 'Invalid credentials.' });
 
         const user = userQuery.rows[0];
-        const validPass = await bcrypt.compare(password, user.password_hash);
+        
+        // Coerce password string securely so bcrypt doesn't throw a generic 500 error on undefined/dirty inputs
+        const validPass = await bcrypt.compare(String(password), user.password_hash);
         if (!validPass) return res.status(401).json({ error: 'Invalid credentials.' });
 
         const token = jwt.sign(
@@ -32,7 +47,7 @@ router.post('/login', async (req, res) => {
         res.json({ success: true, token, user: { username: user.username, role: user.role, permissions: user.permissions } });
     } catch (err) {
         console.error('Login Error:', err);
-        res.status(500).json({ error: 'Internal Server Error' });
+        res.status(500).json({ error: err.message || 'Internal Server Error' });
     }
 });
 

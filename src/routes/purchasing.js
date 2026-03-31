@@ -53,7 +53,7 @@ router.post('/', authenticateJWT, requirePermission('add'), upload.single('purch
              (Purch_Date, Prod_Name, Quantity, Prod_Cost, Disc_Availed, Purch_Amount, Carriage_Offload_Cost, Final_Cost, Per_item_Rate, Purch_From, Contact_No, Email, Remarks, Purch_Receipt_Proof)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *;`,
             [
-                purch_date || new Date(), prod_name, quantity, prod_cost, disc.toFixed(2), purch_amount.toFixed(2), 
+                purch_date || new Date().toISOString(), prod_name || 'Unknown', qty.toNumber(), pCost.toFixed(2), disc.toFixed(2), purch_amount.toFixed(2), 
                 carriage.toFixed(2), final_cost.toFixed(2), per_item_rate.toFixed(2), purch_from, 
                 contact_no, email, remarks, receiptPath
             ]
@@ -64,7 +64,7 @@ router.post('/', authenticateJWT, requirePermission('add'), upload.single('purch
 
     } catch (err) {
         console.error('Purchasing Tx POST Error:', err);
-        res.status(500).json({ error: 'Failed to record purchasing safely.' });
+        res.status(500).json({ error: err.message || 'Failed to record purchasing safely.' });
     }
 });
 

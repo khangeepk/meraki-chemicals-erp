@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import {
   TrendingUp, Package, Heart, Plus, Trash2, AlertTriangle, Edit2,
-  UploadCloud, Sun, Moon, LogOut, User, Lock, Eye, EyeOff,
+  UploadCloud, Sun, Moon, LogOut, User, Lock, Eye, EyeOff, Menu,
   ChevronRight, BarChart3, ShoppingCart, Settings, X, Check, Shield, UserPlus
 } from 'lucide-react';
 
@@ -105,6 +105,7 @@ function LoginScreen({ onLogin, theme, toggleTheme }) {
 // ─── DASHBOARD SHELL ─────────────────────────────────────────────────────────
 function Dashboard({ token, user, onLogout, theme, toggleTheme }) {
   const [activeTab,      setActiveTab]      = useState('dashboard');
+  const [isNavOpen,      setIsNavOpen]      = useState(false);
   const [purchasingData, setPurchasingData] = useState([]);
   const [salesData,      setSalesData]      = useState([]);
   const [loading,        setLoading]        = useState(true);
@@ -130,36 +131,38 @@ function Dashboard({ token, user, onLogout, theme, toggleTheme }) {
   ];
 
   return (
-    <div style={{ minHeight:'100vh', padding:'1.25rem', maxWidth:1600, margin:'0 auto' }}>
-      <header className="neo-surface" style={{ padding:'1rem 1.5rem', marginBottom:'1.5rem', display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:'0.75rem', position:'sticky', top:0, zIndex:50, backdropFilter:'blur(16px)', WebkitBackdropFilter:'blur(16px)' }}>
-        {/* Brand */}
-        <div style={{ display:'flex', alignItems:'center', gap:'0.85rem', cursor:'pointer' }} onClick={() => setActiveTab('dashboard')}>
-          <img
-            src={LOGO}
-            alt="Meraki Chemicals"
-            className="meraki-logo-nav"
-          />
-          <div>
-            <h1 className="gradient-text" style={{ fontSize:'1.15rem', fontWeight:800, lineHeight:1 }}>Meraki Chemicals ERP</h1>
-            <p style={{ fontSize:'0.68rem', color:'var(--text-muted)' }}>Zero-Error Stock Management & Profit Sharing</p>
+    <div className="min-h-screen p-3 md:p-5 max-w-[1600px] mx-auto">
+      <header className="neo-surface p-4 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 sticky top-0 z-50" style={{ backdropFilter:'blur(16px)', WebkitBackdropFilter:'blur(16px)' }}>
+        <div className="flex items-center justify-between w-full md:w-auto">
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab('dashboard')}>
+            <img src={LOGO} alt="Meraki Chemicals" className="meraki-logo-nav" />
+            <div>
+              <h1 className="gradient-text text-lg md:text-xl font-extrabold leading-none">Meraki Chemicals ERP</h1>
+              <p className="text-[0.65rem] md:text-xs text-[var(--text-muted)]">Zero-Error Stock Management & Profit Sharing</p>
+            </div>
           </div>
+          <button className="md:hidden btn-secondary p-2" onClick={() => setIsNavOpen(!isNavOpen)}>
+             {isNavOpen ? <X size={20}/> : <Menu size={20}/>}
+          </button>
         </div>
-        <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', flexWrap:'wrap' }}>
-          <div className="tab-nav">
+
+        <div className={`flex flex-col md:flex-row items-stretch md:items-center gap-3 w-full md:w-auto transition-all ${isNavOpen ? 'flex' : 'hidden md:flex'}`}>
+          <div className="tab-nav flex-col md:flex-row w-full md:w-auto">
             {tabs.map(t => (
-              <button key={t.id} className={`tab-btn${activeTab === t.id ? ' '+(t.activeClass||'active') : ''}`} onClick={() => setActiveTab(t.id)} style={{ display:'flex', alignItems:'center', gap:'0.35rem' }}>{t.icon}{t.label}</button>
+              <button key={t.id} className={`tab-btn w-full md:w-auto justify-start md:justify-center ${activeTab === t.id ? ' '+(t.activeClass||'active') : ''}`} onClick={() => { setActiveTab(t.id); setIsNavOpen(false); }} style={{ display:'flex', alignItems:'center', gap:'0.45rem' }}>{t.icon}{t.label}</button>
             ))}
           </div>
-          <span className="status-badge status-online"><span style={{ width:6, height:6, borderRadius:'50%', background:'#34d399', display:'inline-block' }}/>Live</span>
-          <button onClick={toggleTheme} className="theme-toggle">
-            <div className="theme-toggle-thumb">{theme === 'dark' ? <Moon size={11} color="white"/> : <Sun size={11} color="white"/>}</div>
-          </button>
-          <div style={{ display:'flex', alignItems:'center', gap:'0.4rem', padding:'0.35rem 0.65rem', background:'var(--bg-raised)', borderRadius:'0.5rem', border:'1px solid var(--border-subtle)' }}>
-            <User size={13} style={{ color:'var(--text-muted)' }}/>
-            <span style={{ fontSize:'0.82rem', fontWeight:600, color:'var(--text-secondary)' }}>{user?.username}</span>
-            <span style={{ fontSize:'0.68rem', padding:'0.1rem 0.4rem', borderRadius:999, background:user?.role==='Admin'?'rgba(124,58,237,0.15)':'rgba(13,148,136,0.15)', color:user?.role==='Admin'?'var(--clr-purple-light)':'var(--clr-teal-light)', fontWeight:600 }}>{user?.role}</span>
+          <div className="flex items-center justify-between md:justify-end gap-3 mt-2 md:mt-0 pt-3 md:pt-0 border-t md:border-0 border-[var(--border-subtle)]">
+            <span className="status-badge status-online hidden lg:inline-flex"><span style={{ width:6, height:6, borderRadius:'50%', background:'#34d399', display:'inline-block' }}/>Live</span>
+            <button onClick={toggleTheme} className="theme-toggle">
+              <div className="theme-toggle-thumb">{theme === 'dark' ? <Moon size={11} color="white"/> : <Sun size={11} color="white"/>}</div>
+            </button>
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--bg-raised)] rounded-lg border border-[var(--border-subtle)]">
+              <User size={14} className="text-[var(--text-muted)]"/>
+              <span className="text-sm font-semibold text-[var(--text-secondary)]">{user?.username}</span>
+            </div>
+            <button onClick={onLogout} className="btn-secondary px-3 py-1.5"><LogOut size={16}/></button>
           </div>
-          <button onClick={onLogout} className="btn-secondary" style={{ padding:'0.4rem 0.75rem' }}><LogOut size={14}/></button>
         </div>
       </header>
       <main>
@@ -183,14 +186,14 @@ function DashboardView({ purchasingData, salesData }) {
   const fmt = n => n.toLocaleString('en-PK',{minimumFractionDigits:2});
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:'1.25rem' }}>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))', gap:'1rem' }}>
+    <div className="flex flex-col gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPI title="Total Inventory Value"   value={`Rs. ${fmt(totalInv)}`}    icon={<Package size={20}/>}       accent="#0d9488"/>
         <KPI title="Total Net Profit"        value={`Rs. ${fmt(totalProfit)}`} icon={<TrendingUp size={20}/>}    accent="#059669"/>
         <KPI title="Charity Fund (3%)"       value={`Rs. ${fmt(charity)}`}     icon={<Heart size={20}/>}         accent="#db2777"/>
         <KPI title="Low Stock Alerts"        value={`${lowStock.length} Items`} icon={<AlertTriangle size={20}/>} accent="#d97706" warn={lowStock.length>0}/>
       </div>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))', gap:'1rem' }}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <ProfitCard title="Sami & Qaiser" pct="53%" value={`Rs. ${fmt(samiProfit)}`} color="var(--clr-purple-light)" bg="rgba(124,58,237,0.07)" bdr="rgba(124,58,237,0.2)"/>
         <ProfitCard title="Saif Traders"  pct="44%" value={`Rs. ${fmt(saifProfit)}`} color="var(--clr-cyan-light)"   bg="rgba(8,145,178,0.07)"  bdr="rgba(8,145,178,0.2)"/>
       </div>
@@ -289,12 +292,12 @@ function PurchasingView({ data, setData, token, user }) {
             <ShoppingCart size={17} style={{ color:'var(--clr-purple-light)' }}/> Record New Purchase
           </h2>
           <form onSubmit={handleCreate}>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))', gap:'0.85rem', marginBottom:'1rem' }}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-4">
               {['prod_name','quantity','prod_cost','disc_availed','carriage_offload_cost','purch_from','contact_no','email','remarks'].map(k => (
                 <Field key={k} label={k} val={form[k]} onChange={v => setForm({...form,[k]:v})} type={['quantity','prod_cost','disc_availed','carriage_offload_cost'].includes(k)?'number':'text'} required={k!=='remarks'}/>
               ))}
             </div>
-            <div className="neo-inset" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', padding:'0.85rem', marginBottom:'1rem', textAlign:'center', border:'1px solid rgba(13,148,136,0.12)' }}>
+            <div className="neo-inset grid grid-cols-1 md:grid-cols-3 gap-2 p-3 mb-4 text-center border border-[rgba(13,148,136,0.12)]">
               <CalcCell label="Purch_Amount" value={`Rs. ${fmt(purchAmt)}`} color="var(--text-primary)"/>
               <CalcCell label="Final_Cost"   value={`Rs. ${fmt(finalCost)}`} color="var(--clr-teal-light)" divider/>
               <CalcCell label="Per_item_Rate" value={`Rs. ${fmt(perItem)}`} color="var(--clr-cyan-light)"  divider/>
@@ -311,10 +314,10 @@ function PurchasingView({ data, setData, token, user }) {
       )}
 
       {/* ── GRID ── */}
-      <div className="neo-surface" style={{ overflow:'hidden' }}>
-        <div style={{ padding:'0.85rem 1.25rem', borderBottom:'1px solid var(--border-subtle)', fontWeight:700, color:'var(--text-primary)', fontSize:'0.9rem' }}>Purchasing Records ({data.length})</div>
-        <div style={{ overflowX:'auto' }} className="scrollbar-thin">
-          <table className="data-table">
+      <div className="neo-surface overflow-hidden">
+        <div className="p-3 md:p-4 border-b border-[var(--border-subtle)] font-bold text-[var(--text-primary)] md:text-[0.9rem]">Purchasing Records ({data.length})</div>
+        <div className="w-full overflow-x-auto scrollbar-thin">
+          <table className="data-table w-full">
             <thead><tr>{['ID','Date','Product','Qty','Cost','Disc','Purch_Amt','Carriage','Final_Cost','Rate/Item','From','Contact','Actions'].map(h=><th key={h}>{h}</th>)}</tr></thead>
             <tbody>
               {data.map(r => (
@@ -413,8 +416,8 @@ function SalesView({ data, setData, purchasingData, token, user }) {
             <TrendingUp size={17} style={{ color:'#34d399' }}/> Record Sales Transaction
           </h2>
           <form onSubmit={handleCreate}>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))', gap:'0.85rem', marginBottom:'1rem' }}>
-              <div style={{ display:'flex', flexDirection:'column', gap:'0.3rem' }}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-4">
+              <div className="flex flex-col gap-1">
                 <label style={labelStyle}>Select Product (Prod_ID)</label>
                 <select required value={form.prod_id} onChange={e => setForm({...form,prod_id:e.target.value})} className="glass-input">
                   <option value="">-- Choose --</option>
@@ -425,7 +428,7 @@ function SalesView({ data, setData, purchasingData, token, user }) {
                 <Field key={k} label={k} val={form[k]} onChange={v => setForm({...form,[k]:v})} type={['quantity','sold_amount','disc_availed'].includes(k)?'number':'text'} required={!['disc_availed','contact_no','email','remarks'].includes(k)}/>
               ))}
             </div>
-            <div className="neo-inset" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', padding:'0.85rem', marginBottom:'1rem', textAlign:'center', border:'1px solid rgba(52,211,153,0.12)' }}>
+            <div className="neo-inset grid grid-cols-2 md:grid-cols-4 gap-2 p-3 mb-4 text-center border border-[rgba(52,211,153,0.12)]">
               <CalcCell label="Cost/Item"   value={`Rs. ${fmt(fCost)}`}  color="var(--text-secondary)"/>
               <CalcCell label="Gross_Amt"   value={`Rs. ${fmt(gross)}`}  color="var(--text-primary)" divider/>
               <CalcCell label="Net_Profit"  value={`Rs. ${fmt(net)}`}    color={net>=0?'#34d399':'#f87171'} divider/>
@@ -444,10 +447,10 @@ function SalesView({ data, setData, purchasingData, token, user }) {
         </div>
       )}
 
-      <div className="neo-surface" style={{ overflow:'hidden' }}>
-        <div style={{ padding:'0.85rem 1.25rem', borderBottom:'1px solid var(--border-subtle)', fontWeight:700, color:'var(--text-primary)', fontSize:'0.9rem' }}>Sales Records ({data.length})</div>
-        <div style={{ overflowX:'auto' }} className="scrollbar-thin">
-          <table className="data-table">
+      <div className="neo-surface overflow-hidden">
+        <div className="p-3 md:p-4 border-b border-[var(--border-subtle)] font-bold text-[var(--text-primary)] md:text-[0.9rem]">Sales Records ({data.length})</div>
+        <div className="w-full overflow-x-auto scrollbar-thin">
+          <table className="data-table w-full">
             <thead><tr>{['Sale_ID','Product','Date','Qty','Cost','Sold','Gross','Net_Profit','Charity','Sami 53%','Saif 44%','Rem_Inv','Actions'].map(h=><th key={h}>{h}</th>)}</tr></thead>
             <tbody>
               {data.map(r => (

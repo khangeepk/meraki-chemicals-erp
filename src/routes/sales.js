@@ -43,42 +43,64 @@ router.post('/', authenticateJWT, requirePermission('add'), upload.single('sale_
             if (!pQuery.rows.length) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Product not found in Purchasing.' }); }
             prod_cost = pQuery.rows[0].per_item_rate;
             prod_name = pQuery.rows[0].prod_name;
-            availableStock = pQuery.rows[0].quantity;
+
+            // Strict Mathematics: Available Stock = Original Purchased Quantity - SUM(All Previous Solds)
+            const purchasedTotal = Number(pQuery.rows[0].quantity);
+            const sQuery = await client.query('SELECT COALESCE(SUM(Quantity), 0) as total_sold FROM tbl_Sales WHERE Prod_ID = $1', [prod_id]);
+            const totalSold = Number(sQuery.rows[0].total_sold);
+            
+            availableStock = purchasedTotal - totalSold;
 
             if (Number(quantity) > availableStock) { await client.query('ROLLBACK'); return res.status(400).json({ error: 'Insufficient inventory available!' }); }
         }
 
-        const qty = new Decimal(quantity || 0); const pCost = new Decimal(prod_cost || 0);
-        const sAmount = new Decimal(sold_amount || 0); const disc = new Decimal(disc_availed || 0);
+        const qty = new Decimal(quantity || 0);
+        const pCost = new Decimal(prod_cost || 0);
+        const sAmount = new Decimal(sold_amount || 0);
+        const disc = new Decimal(disc_availed || 0);
 
+        // Chain-of-Thought Math Execution
+        // 1. Gross_Amount = Sold_Amount - Disc_Availed
         const gross_amount = sAmount.minus(disc);
-        const net_profit = gross_amount.minus(pCost.times(qty));
-        const remaining_inventory = availableStock - Number(quantity);
-        const distribution = calculateProfitDistribution(net_profit);
+
+        // 2. Net_Profit = Gross_Amount - (Prod_Cost * Quantity)
+        const total_landed_cost = pCost.times(qty);
+        const net_profit = gross_amount.minus(total_landed_cost);
+
+        // 3. P&L & Deductions (Deduction_Charity = 3%, Final_Profit_Sami = 53%, Final_Profit_Saif = 44%)
+        const deduction_charity = net_profit.times(0.03);
+        const final_profit_sami = net_profit.times(0.53);
+        const final_profit_saif = net_profit.times(0.44);
+
+        const remaining_inventory = availableStock - qty.toNumber();
         const receiptPath = req.file ? `/uploads/${req.file.filename}` : null;
 
         let saleResult;
         if (process.env.NODE_ENV !== 'test') {
-            await client.query(`UPDATE tbl_Purchasing SET Quantity = $1 WHERE Prod_ID = $2`, [remaining_inventory, prod_id]);
-
             const insertQuery = await client.query(
                 `INSERT INTO tbl_Sales (Prod_ID, Sale_Date, Prod_Name, Quantity, Prod_Cost, Disc_Availed, Sold_Amount, Sold_To, Contact_No, Email, Gross_Amount, Net_Profit, Deduction_Charity, Final_Profit_Sami, Final_Profit_Saif, Remaining_Inventory, Remarks, Sale_Receipt_Proof)
                  VALUES ($1, CURRENT_DATE, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) RETURNING *;`,
-                [prod_id, prod_name, quantity, pCost.toFixed(2), disc.toFixed(2), sAmount.toFixed(2), sold_to, 
-                 contact_no, email, gross_amount.toFixed(2), net_profit.toFixed(2), distribution.charity, 
-                 distribution.sami_profit, distribution.saif_profit, remaining_inventory, remarks, receiptPath]
+                [
+                    prod_id, prod_name, qty.toNumber(), pCost.toFixed(2), disc.toFixed(2), sAmount.toFixed(2), sold_to, 
+                    contact_no, email, gross_amount.toFixed(2), net_profit.toFixed(2), deduction_charity.toFixed(2), 
+                    final_profit_sami.toFixed(2), final_profit_saif.toFixed(2), remaining_inventory, remarks, receiptPath
+                ]
             );
             saleResult = insertQuery.rows[0];
             await client.query('COMMIT'); 
         } else {
-            saleResult = { mock: true, net_profit: net_profit.toFixed(2), remaining_inventory, distribution };
+            saleResult = { 
+                mock: true, net_profit: net_profit.toFixed(2), remaining_inventory,
+                distribution: { sami_profit: final_profit_sami.toFixed(2), saif_profit: final_profit_saif.toFixed(2), charity: deduction_charity.toFixed(2) }
+            };
         }
 
         res.status(201).json({ success: true, data: saleResult });
 
     } catch (err) {
         if (client) await client.query('ROLLBACK'); 
-        res.status(500).json({ error: 'Transaction failed, completely rolled back.' });
+        console.error('Sales Tx POST Error:', err);
+        res.status(500).json({ error: err.message || 'Transaction failed, completely rolled back.' });
     } finally {
         if (client) client.release();
     }
