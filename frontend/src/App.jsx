@@ -3,7 +3,7 @@ import axios from 'axios';
 import {
   TrendingUp, Package, Heart, Plus, Trash2, AlertTriangle, Edit2,
   UploadCloud, Sun, Moon, LogOut, User, Lock, Eye, EyeOff, Menu,
-  ChevronRight, BarChart3, ShoppingCart, Settings, X, Check, Shield, UserPlus
+  ChevronRight, BarChart3, ShoppingCart, Settings, X, Check, Shield, UserPlus, FileText, Upload, Download, Wallet
 } from 'lucide-react';
 
 // Auto-detect environment: use relative URL on Vercel, localhost in dev
@@ -205,6 +205,7 @@ function Dashboard({ token, user, onLogout, theme, toggleTheme }) {
     { id:'dashboard',  label:'Dashboard',   icon:<BarChart3 size={14}/> },
     { id:'purchasing', label:'Purchasing',   icon:<ShoppingCart size={14}/>, activeClass:'active-purchase' },
     { id:'sales',      label:'Sales',        icon:<TrendingUp size={14}/>,   activeClass:'active-sales' },
+    { id:'ledger',     label:'Partner Ledger', icon:<Wallet size={14}/>,     activeClass:'active-admin' },
     ...(user?.role === 'Admin' ? [{ id:'admin', label:'Admin', icon:<Settings size={14}/>, activeClass:'active-admin' }] : []),
   ];
 
@@ -248,6 +249,7 @@ function Dashboard({ token, user, onLogout, theme, toggleTheme }) {
         {activeTab === 'dashboard'  && <DashboardView  purchasingData={purchasingData} salesData={salesData} loading={loading}/>}
         {activeTab === 'purchasing' && <PurchasingView data={purchasingData} setData={setPurchasingData} token={token} user={user}/>}
         {activeTab === 'sales'      && <SalesView      data={salesData}      setData={setSalesData}      purchasingData={purchasingData} token={token} user={user}/>}
+        {activeTab === 'ledger'     && <LedgerView     token={token} user={user}/>}
         {activeTab === 'admin'      && user?.role === 'Admin' && <AdminPanel token={token}/>}
       </main>
     </div>
@@ -709,6 +711,125 @@ function Modal({ title, onClose, onSave, children }) {
           <button onClick={onSave}  className="btn-primary"><Check size={14}/> Save Changes</button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── LEDGER VIEW ──────────────────────────────────────────────────────────────
+function LedgerView({ token, user }) {
+  const emptySetup = { Investment_Date: '', Item_Details: '', Principal_Amount: '', PO_Slip_URL: '', Sent_Payment_Receipt_URL: '' };
+  const emptyReconcile = { Return_Date: '', Sale_Amount: '', Expense_Amount: '', Return_Receipt_URL: '' };
+  
+  const [data, setData] = useState([]);
+  const [form, setForm] = useState(emptySetup);
+  const [saving, setSaving] = useState(false);
+  const [reconcileDoc, setReconcileDoc] = useState(null);
+  const [recForm, setRecForm] = useState(emptyReconcile);
+  
+  const ah = { headers: { Authorization: `Bearer ${token}` } };
+  const fmt = n => Number(n).toLocaleString('en-PK',{minimumFractionDigits:2});
+
+  useEffect(() => {
+    axios.get(`${API}/api/investments`, ah).then(res => setData(res.data.data)).catch(() => {});
+  }, [token]);
+
+  const handleCreate = async (e) => {
+    e.preventDefault(); setSaving(true);
+    try {
+      const res = await axios.post(`${API}/api/investments/setup`, form, ah);
+      setData([res.data.data, ...data]);
+      setForm(emptySetup);
+    } catch (err) { alert(err.response?.data?.error || 'Error setting up investment'); }
+    setSaving(false);
+  };
+
+  const handleReconcile = async (e) => {
+    e.preventDefault(); setSaving(true);
+    try {
+      const res = await axios.put(`${API}/api/investments/${reconcileDoc.ledger_id}/reconcile`, recForm, ah);
+      setData(data.map(d => d.ledger_id === reconcileDoc.ledger_id ? res.data.data : d));
+      setReconcileDoc(null); setRecForm(emptyReconcile);
+    } catch (err) { alert(err.response?.data?.error || 'Error reconciling ledger'); }
+    setSaving(false);
+  };
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:'1.25rem' }}>
+      <div className="neo-surface" style={{ padding:'1.5rem', borderTop:'3px solid #06b6d4' }}>
+        <h2 style={{ fontWeight:700, fontSize:'1.1rem', color:'var(--text-primary)', marginBottom:'1.1rem', display:'flex', alignItems:'center', gap:'0.5rem' }}>
+          <Wallet size={17} style={{ color:'#06b6d4' }}/> Initial Partner Investment Setup
+        </h2>
+        <form onSubmit={handleCreate}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+            <Field label="Investment_Date" type="date" val={form.Investment_Date} onChange={v => setForm({...form, Investment_Date:v})} required={false}/>
+            <Field label="Item_Details" val={form.Item_Details} onChange={v => setForm({...form, Item_Details:v})}/>
+            <Field label="Principal_Amount" type="number" val={form.Principal_Amount} onChange={v => setForm({...form, Principal_Amount:v})}/>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+             <Field label="PO_Slip_URL" val={form.PO_Slip_URL} onChange={v => setForm({...form, PO_Slip_URL:v})}/>
+             <Field label="Sent_Payment_Receipt_URL" val={form.Sent_Payment_Receipt_URL} onChange={v => setForm({...form, Sent_Payment_Receipt_URL:v})}/>
+          </div>
+          <button type="submit" disabled={saving} className="btn-primary" id="btn-create-investment"><Plus size={15}/>{saving?'Saving...':'Setup Investment'}</button>
+        </form>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {data.map(d => (
+          <div key={d.ledger_id} className="neo-surface p-4 flex flex-col gap-3" style={{ borderLeft: `4px solid ${d.return_date ? '#34d399' : '#fbbf24'}`}}>
+            <div className="flex justify-between items-start">
+              <div>
+                 <span className="text-xs font-bold uppercase text-[var(--text-muted)] tracking-wider">Ledger #{d.ledger_id}</span>
+                 <h3 className="text-lg font-bold text-[var(--text-primary)] leading-tight mt-1">{d.item_details}</h3>
+              </div>
+              <span className={`text-[0.7rem] px-2 py-1 rounded-full font-bold ${d.return_date ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-500'}`}>
+                {d.return_date ? 'CLOSED' : 'OPEN'}
+              </span>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-2 mt-2 p-3 bg-[var(--bg-base)] rounded border border-[var(--border-subtle)]">
+                <CalcCell label="Principal" value={`Rs. ${fmt(d.principal_amount||0)}`} color="var(--text-primary)" />
+                <CalcCell label="Date" value={d.investment_date?.substring(0,10)} color="var(--text-muted)" divider />
+                <div className="col-span-2 flex gap-3 text-xs mt-2 border-t border-[var(--border-subtle)] pt-2">
+                   <a href={d.po_slip_url} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-[#06b6d4] hover:underline"><FileText size={12}/> PO Slip</a>
+                   <a href={d.sent_payment_receipt_url} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-[#a855f7] hover:underline"><FileText size={12}/> Sent Receipt</a>
+                </div>
+            </div>
+
+            {d.return_date ? (
+              <div className="grid grid-cols-2 gap-2 p-3 bg-emerald-900/10 rounded border border-emerald-500/20">
+                <CalcCell label="Sale Amount" value={`Rs. ${fmt(d.sale_amount||0)}`} color="#10b981" />
+                <CalcCell label="Net Profit" value={`Rs. ${fmt(d.net_profit||0)}`} color="#10b981" divider id="lbl-net-profit" />
+                <CalcCell label="Sami Profit (53%)" value={`Rs. ${fmt(d.sami_qaiser_profit||0)}`} color="#a855f7" id="lbl-sami-profit" />
+                <CalcCell label="Saif Profit (44%)" value={`Rs. ${fmt(d.saif_profit||0)}`} color="#06b6d4" divider id="lbl-saif-profit" />
+                <CalcCell label="Charity (3%)" value={`Rs. ${fmt(d.charity_deduction||0)}`} color="#ec4899" id="lbl-charity-profit" />
+                <CalcCell label="Expense" value={`Rs. ${fmt(d.expense_amount||0)}`} color="#f59e0b" divider />
+              </div>
+            ) : (
+              <button 
+                id="btn-add-return"
+                className="w-full py-2 bg-[var(--bg-raised)] border border-[var(--border-subtle)] rounded text-sm font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-base)] transition-colors"
+                onClick={() => setReconcileDoc(d)}
+              >
+                 Add Return Details (Reconcile)
+              </button>
+            )}
+          </div>
+        ))}
+        {data.length === 0 && <p className="text-[var(--text-muted)] p-5 text-center col-span-2">No investments recorded yet.</p>}
+      </div>
+
+      {reconcileDoc && (
+        <Modal title={`Reconcile Ledger #${reconcileDoc.ledger_id}`} onClose={() => setReconcileDoc(null)} onSave={handleReconcile}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Return_Date" type="date" val={recForm.Return_Date} onChange={v => setRecForm({...recForm, Return_Date:v})} required={false}/>
+            <Field label="Sale_Amount" type="number" val={recForm.Sale_Amount} onChange={v => setRecForm({...recForm, Sale_Amount:v})}/>
+            <Field label="Expense_Amount" type="number" val={recForm.Expense_Amount} onChange={v => setRecForm({...recForm, Expense_Amount:v})}/>
+            <Field label="Return_Receipt_URL" val={recForm.Return_Receipt_URL} onChange={v => setRecForm({...recForm, Return_Receipt_URL:v})}/>
+          </div>
+          <button type="submit" disabled={saving} className="btn-primary mt-4" id="btn-submit-reconcile" onClick={handleReconcile}><Check size={14}/> Submit Reconcile</button>
+          <p className="mt-4 text-xs text-[var(--text-muted)]"><AlertTriangle size={12} className="inline mr-1 text-amber-500" /> This action will auto-calculate exact profit distribution according to 53/44/3 margin logic using strict math.</p>
+        </Modal>
+      )}
     </div>
   );
 }

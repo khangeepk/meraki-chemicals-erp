@@ -4,6 +4,7 @@ const authRoutes = require('./routes/auth');
 const purchasingRoutes = require('./routes/purchasing');
 const salesRoutes = require('./routes/sales');
 const productsRoutes = require('./routes/products');
+const investmentsRoutes = require('./routes/investments');
 
 const app = express();
 
@@ -15,6 +16,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/purchasing', purchasingRoutes);
 app.use('/api/sales', salesRoutes);
 app.use('/api/products', productsRoutes);
+app.use('/api/investments', investmentsRoutes);
 
 // Fix for "Cannot GET /"
 app.get('/', (req, res) => {

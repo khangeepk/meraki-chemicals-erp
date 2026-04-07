@@ -61,3 +61,21 @@ CREATE TABLE IF NOT EXISTS tbl_Company_Profile (
     Contact VARCHAR(50),
     Address TEXT
 );
+
+-- DDL for Partner Investment Ledger
+CREATE TABLE IF NOT EXISTS tbl_Investment_Ledger (
+    Ledger_ID SERIAL PRIMARY KEY,
+    Investment_Date DATE NOT NULL,
+    Item_Details TEXT NOT NULL,
+    Principal_Amount DECIMAL(12, 2) NOT NULL,
+    PO_Slip_URL VARCHAR(500) NOT NULL,
+    Sent_Payment_Receipt_URL VARCHAR(500) NOT NULL,
+    Return_Date DATE,
+    Sale_Amount DECIMAL(12, 2),
+    Expense_Amount DECIMAL(12, 2),
+    Return_Receipt_URL VARCHAR(500),
+    Net_Profit DECIMAL(12, 2),
+    Sami_Qaiser_Profit DECIMAL(12, 2),
+    Saif_Profit DECIMAL(12, 2),
+    Charity_Deduction DECIMAL(12, 2)
+);
